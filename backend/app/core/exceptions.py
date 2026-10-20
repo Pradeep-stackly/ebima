@@ -1,0 +1,2 @@
+class InvalidDateRangeError(ValueError):
+    pass
