@@ -2,11 +2,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { getDashboardData } from '../services/dashboardService';
 import { DashboardData } from '../types';
 
+const ERROR_MESSAGE = "We couldn't load the dashboard. Please check your connection and try again.";
+
 interface UseDashboardDataResult {
   data: DashboardData | null;
   loading: boolean;
   refreshing: boolean;
   error: string | null;
+  retry: () => void;
   refresh: () => void;
 }
 
@@ -16,13 +19,17 @@ export function useDashboardData(): UseDashboardDataResult {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async (isRefresh: boolean) => {
-    if (isRefresh) setRefreshing(true);
+  const load = useCallback(async (mode: 'initial' | 'refresh') => {
+    if (mode === 'initial') setLoading(true);
+    else setRefreshing(true);
+
     try {
+      const result = await getDashboardData();
+      setData(result);
       setError(null);
-      setData(await getDashboardData());
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      console.warn('Dashboard request failed:', err);
+      setError(ERROR_MESSAGE);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -30,8 +37,15 @@ export function useDashboardData(): UseDashboardDataResult {
   }, []);
 
   useEffect(() => {
-    load(false);
+    load('initial');
   }, [load]);
 
-  return { data, loading, refreshing, error, refresh: () => load(true) };
+  return {
+    data,
+    loading,
+    refreshing,
+    error,
+    retry: () => load('initial'),
+    refresh: () => load('refresh'),
+  };
 }

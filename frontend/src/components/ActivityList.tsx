@@ -1,11 +1,11 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, fontSize, spacing } from '../constants/theme';
-import { ActivityItem } from '../types';
+import { Activity } from '../types';
 import ActivityListItem from './ActivityListItem';
 import Card from './Card';
 
 interface ActivityListProps {
-  items: ActivityItem[];
+  items: Activity[];
   emptyMessage?: string;
 }
 

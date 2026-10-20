@@ -25,14 +25,14 @@ export default function TopCategoryCard({ category }: TopCategoryCardProps) {
         </View>
         <View style={styles.right}>
           <Text style={styles.revenue}>{formatCurrencyCompact(category.revenue)}</Text>
-          <ChangeBadge changePercent={category.changePercent} />
+          <ChangeBadge changePercent={category.change} />
         </View>
       </View>
 
       <View style={styles.track}>
-        <View style={[styles.fill, { width: `${Math.min(category.sharePercent, 100)}%` }]} />
+        <View style={[styles.fill, { width: `${Math.min(category.share, 100)}%` }]} />
       </View>
-      <Text style={styles.share}>{category.sharePercent}% of total revenue</Text>
+      <Text style={styles.share}>{category.share}% of total revenue</Text>
     </Card>
   );
 }

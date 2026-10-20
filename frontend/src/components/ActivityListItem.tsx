@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, fontSize, radius, spacing } from '../constants/theme';
-import { ActivityItem, ActivityType } from '../types';
+import { Activity, ActivityType } from '../types';
 import { IconName } from '../types/icons';
 import { formatCurrency, formatRelativeTime } from '../utils/format';
 
@@ -14,7 +14,7 @@ const ACTIVITY_ICONS: Record<ActivityType, { icon: IconName; color: string; back
 };
 
 interface ActivityListItemProps {
-  item: ActivityItem;
+  item: Activity;
 }
 
 export default function ActivityListItem({ item }: ActivityListItemProps) {
@@ -34,7 +34,7 @@ export default function ActivityListItem({ item }: ActivityListItemProps) {
         </Text>
       </View>
       <View style={styles.meta}>
-        {item.amount !== undefined ? <Text style={styles.amount}>{formatCurrency(item.amount)}</Text> : null}
+        {item.amount !== null ? <Text style={styles.amount}>{formatCurrency(item.amount)}</Text> : null}
         <Text style={styles.time}>{formatRelativeTime(item.timestamp)}</Text>
       </View>
     </View>

@@ -1,6 +1,9 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, fontSize, spacing } from '../constants/theme';
-import { ChartPoint } from '../types';
+export interface ChartPoint {
+  label: string;
+  value: number;
+}
 
 interface TrendChartProps {
   data: ChartPoint[];
@@ -16,7 +19,7 @@ export default function TrendChart({ data, height = 140 }: TrendChartProps) {
         {data.map((point, index) => {
           const isLatest = index === data.length - 1;
           return (
-            <View key={point.label} style={styles.column}>
+            <View key={`${point.label}-${index}`} style={styles.column}>
               <View
                 style={[
                   styles.bar,
@@ -31,8 +34,8 @@ export default function TrendChart({ data, height = 140 }: TrendChartProps) {
         })}
       </View>
       <View style={styles.labelsRow}>
-        {data.map((point) => (
-          <Text key={point.label} style={styles.label} numberOfLines={1}>
+        {data.map((point, index) => (
+          <Text key={`${point.label}-${index}`} style={styles.label} numberOfLines={1}>
             {point.label}
           </Text>
         ))}

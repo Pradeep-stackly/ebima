@@ -10,10 +10,11 @@ interface KpiCardProps {
   value: string;
   changePercent: number;
   icon: IconName;
+  caption?: string;
   style?: StyleProp<ViewStyle>;
 }
 
-export default function KpiCard({ label, value, changePercent, icon, style }: KpiCardProps) {
+export default function KpiCard({ label, value, changePercent, icon, caption = 'vs last period', style }: KpiCardProps) {
   return (
     <Card style={[styles.card, style]}>
       <View style={styles.topRow}>
@@ -30,7 +31,7 @@ export default function KpiCard({ label, value, changePercent, icon, style }: Kp
       <View style={styles.bottomRow}>
         <ChangeBadge changePercent={changePercent} />
         <Text style={styles.caption} numberOfLines={1}>
-          vs last month
+          {caption}
         </Text>
       </View>
     </Card>

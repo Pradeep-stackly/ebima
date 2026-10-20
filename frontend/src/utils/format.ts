@@ -18,6 +18,15 @@ export function formatPercent(value: number): string {
   return `${sign}${value.toFixed(1)}%`;
 }
 
+export function formatDayLabel(isoDate: string): string {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString('en-IN', { weekday: 'short' });
+}
+
+export function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 export function getGreeting(date: Date = new Date()): string {
   const hour = date.getHours();
   if (hour < 12) return 'Good morning';

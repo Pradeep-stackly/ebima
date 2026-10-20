@@ -1,42 +1,25 @@
-import {
-  ActivityIndicator,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ActivityList from '../components/ActivityList';
 import AnalyticsPreview from '../components/AnalyticsPreview';
 import DashboardHeader from '../components/DashboardHeader';
+import ErrorState from '../components/ErrorState';
 import KpiGrid from '../components/KpiGrid';
+import LoadingState from '../components/LoadingState';
 import SectionHeader from '../components/SectionHeader';
-import { colors, fontSize, MAX_CONTENT_WIDTH, radius, spacing, TOUCH_TARGET } from '../constants/theme';
+import { colors, fontSize, MAX_CONTENT_WIDTH, radius, spacing } from '../constants/theme';
 import { useDashboardData } from '../hooks/useDashboardData';
 import { TabScreenProps } from '../navigation/types';
 
 export default function DashboardScreen({ navigation }: TabScreenProps<'Dashboard'>) {
-  const { data, loading, refreshing, error, refresh } = useDashboardData();
+  const { data, loading, refreshing, error, retry, refresh } = useDashboardData();
 
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
+  if (loading && !data) {
+    return <LoadingState message="Loading dashboard..." />;
   }
 
-  if (error || !data) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>{error ?? 'No data available'}</Text>
-        <Pressable style={styles.retryButton} onPress={refresh} accessibilityRole="button">
-          <Text style={styles.retryText}>Try again</Text>
-        </Pressable>
-      </View>
-    );
+  if (!data) {
+    return <ErrorState message={error ?? 'No dashboard data available.'} onRetry={retry} />;
   }
 
   return (
@@ -44,7 +27,14 @@ export default function DashboardScreen({ navigation }: TabScreenProps<'Dashboar
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={refresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
       >
         <DashboardHeader
           userName={data.user.name}
@@ -53,14 +43,16 @@ export default function DashboardScreen({ navigation }: TabScreenProps<'Dashboar
           onProfilePress={() => navigation.navigate('Profile')}
         />
 
-        <SectionHeader title="Overview" subtitle="This month's key metrics" />
-        <KpiGrid metrics={data.kpis} />
+        {error ? <Text style={styles.banner}>Couldn't refresh. Showing the last loaded data.</Text> : null}
+
+        <SectionHeader title="Overview" subtitle={`Last ${data.period.days} days`} />
+        <KpiGrid kpis={data.kpis} />
 
         <SectionHeader title="Analytics" subtitle="Sales performance at a glance" />
         <AnalyticsPreview analytics={data.analytics} />
 
         <SectionHeader title="Recent Activity" />
-        <ActivityList items={data.recentActivity} />
+        <ActivityList items={data.recentActivities} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -75,21 +67,12 @@ const styles = StyleSheet.create({
     maxWidth: MAX_CONTENT_WIDTH,
     alignSelf: 'center',
   },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background,
-    padding: spacing.xl,
-  },
-  errorText: { fontSize: fontSize.md, color: colors.text, textAlign: 'center' },
-  retryButton: {
+  banner: {
     marginTop: spacing.lg,
-    minHeight: TOUCH_TARGET,
-    paddingHorizontal: spacing.xl,
+    padding: spacing.md,
     borderRadius: radius.md,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
+    backgroundColor: colors.dangerSoft,
+    color: colors.danger,
+    fontSize: fontSize.sm,
   },
-  retryText: { color: '#fff', fontWeight: '600' },
 });
