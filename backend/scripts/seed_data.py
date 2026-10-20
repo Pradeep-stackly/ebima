@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import SessionLocal
 from app.models import Activity, Category, Customer, Order, Product
+from app.utils.dates import today as business_today
 
 DAYS_OF_HISTORY = 60
 
@@ -196,7 +197,7 @@ def main() -> None:
     args = parser.parse_args()
 
     rng = random.Random(42)
-    today = date.today()
+    today = business_today()
     now = datetime.now(timezone.utc)
 
     with SessionLocal() as db:

@@ -3,10 +3,11 @@ from decimal import Decimal
 Number = int | float | Decimal
 
 
-def percent_change(current: Number, previous: Number) -> float:
+def percent_change(current: Number, previous: Number) -> float | None:
     if not previous:
-        return 0.0
-    return round(float((Decimal(current) - Decimal(previous)) / Decimal(previous) * 100), 1)
+        return None
+    change = (Decimal(current) - Decimal(previous)) / abs(Decimal(previous)) * 100
+    return round(float(change), 1)
 
 
 def share_percent(part: Number, total: Number) -> float:

@@ -142,6 +142,7 @@ All of these are SQL queries (`SUM`, `COUNT`, `GROUP BY`, `WHERE`) in `app/repos
 | GET | /api/customers | limit (1-100, default 20), offset (>= 0) |
 | GET | /api/activities | limit (1-100, default 10), offset (>= 0) |
 | GET | /api/analytics/revenue-trend | start_date, end_date (YYYY-MM-DD, default last 30 days, max 366 days) |
+| GET | /api/analytics/overview | start_date, end_date, comparison_period (`previous` or `none`, default `previous`) |
 
 List endpoints return:
 
@@ -167,6 +168,36 @@ Example: `GET /api/analytics/revenue-trend?start_date=2026-10-12&end_date=2026-1
 ```
 
 If no orders match, `points` still has one entry per day with 0 values, so the response shape is always the same.
+
+### GET /api/analytics/overview
+
+All analytics for one date range, used by the Analytics screen.
+
+Example: `GET /api/analytics/overview?start_date=2026-10-14&end_date=2026-10-20`
+
+```json
+{
+  "period": { "startDate": "2026-10-14", "endDate": "2026-10-20", "days": 7 },
+  "comparisonPeriod": { "startDate": "2026-10-07", "endDate": "2026-10-13", "days": 7 },
+  "hasData": true,
+  "metrics": {
+    "revenue": { "value": 336200.0, "previous": 1028400.0, "change": -67.3 },
+    "orders": { "value": 14.0, "previous": 28.0, "change": -50.0 },
+    "profit": { "value": 107420.0, "previous": 295880.0, "change": -63.7 },
+    "customers": { "value": 11.0, "previous": 16.0, "change": -31.2 }
+  },
+  "indicators": { "averageOrderValue": 24014.29, "itemsSold": 34, "profitMargin": 32.0, "cancellationRate": 28.0 },
+  "revenueTrend": [{ "date": "2026-10-14", "revenue": 121350.0, "orders": 4 }],
+  "orderStatus": { "total": 25, "byStatus": [{ "status": "pending", "count": 4 }] },
+  "topCategory": { "name": "Furniture", "revenue": 211500.0, "orders": 5, "itemsSold": 9, "share": 62.9 }
+}
+```
+
+- Dates are calendar dates in `Asia/Kolkata` (`TIMEZONE` in `.env`). Both `start_date` and `end_date` are included.
+- Comparison period = the same number of days just before `start_date`. Last 7 days is compared with the 7 days before it.
+- `change` is `null` when the previous value is 0 or when `comparison_period=none`. It never returns infinity or a fake 0%.
+- `hasData` is `false` when there are no orders at all in the range. Metrics are 0 and `topCategory` is `null`.
+- Current and previous period totals come from a single SQL query using `FILTER (WHERE ...)` for each period.
 
 `limit` and `offset` are applied in SQL (`LIMIT` / `OFFSET`), and date filters are applied in the `WHERE` clause.
 

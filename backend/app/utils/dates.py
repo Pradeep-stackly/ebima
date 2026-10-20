@@ -1,6 +1,9 @@
 from collections.abc import Iterator
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
+
+from app.core.config import settings
 
 
 @dataclass(frozen=True)
@@ -20,6 +23,10 @@ class DateRange:
             yield self.start + timedelta(days=offset)
 
 
+def today() -> date:
+    return datetime.now(ZoneInfo(settings.timezone)).date()
+
+
 def last_n_days(days: int, end: date | None = None) -> DateRange:
-    end = end or date.today()
+    end = end or today()
     return DateRange(end - timedelta(days=days - 1), end)

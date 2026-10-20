@@ -2,7 +2,7 @@ from datetime import date
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, Date, ForeignKey, Numeric, String
+from sqlalchemy import CheckConstraint, Date, ForeignKey, Index, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -26,11 +26,12 @@ class Order(Base):
             "status IN ('pending', 'processing', 'shipped', 'delivered', 'cancelled')",
             name="ck_orders_status",
         ),
+        Index("ix_orders_order_date_status", "order_date", "status"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     order_number: Mapped[str] = mapped_column(String(20), unique=True)
-    order_date: Mapped[date] = mapped_column(Date, index=True)
+    order_date: Mapped[date] = mapped_column(Date)
     customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"), index=True)
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), index=True)
     quantity: Mapped[int]

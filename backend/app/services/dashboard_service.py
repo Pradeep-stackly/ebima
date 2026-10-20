@@ -1,66 +1,58 @@
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.models.order import ORDER_STATUSES
 from app.repositories import activity_repository, order_repository
 from app.schemas.dashboard import (
     Analytics,
     DashboardKpis,
     DashboardResponse,
     KpiData,
-    OrdersSummary,
-    ReportPeriod,
-    StatusCount,
     TopCategory,
     UserInfo,
 )
 from app.services.activity_service import to_activity_out
-from app.services.analytics_service import get_daily_points
+from app.services.analytics_service import build_orders_summary, get_daily_points, to_report_period
 from app.utils.dates import DateRange, last_n_days
 from app.utils.metrics import percent_change, share_percent
 
 
+def change_or_zero(current: Decimal | int, previous: Decimal | int) -> float:
+    return percent_change(current, previous) or 0.0
+
+
 def get_kpis(db: Session, period: DateRange) -> DashboardKpis:
-    current = order_repository.get_sales_totals(db, period.start, period.end)
-    previous_period = period.previous()
-    previous = order_repository.get_sales_totals(db, previous_period.start, previous_period.end)
+    current, previous = order_repository.get_sales_totals(db, [period, period.previous()])
 
     profit = current.revenue - current.cost
     previous_profit = previous.revenue - previous.cost
 
     return DashboardKpis(
-        revenue=KpiData(value=current.revenue, change=percent_change(current.revenue, previous.revenue)),
-        orders=KpiData(value=current.orders, change=percent_change(current.orders, previous.orders)),
-        customers=KpiData(value=current.customers, change=percent_change(current.customers, previous.customers)),
-        profit=KpiData(value=profit, change=percent_change(profit, previous_profit)),
-    )
-
-
-def get_orders_summary(db: Session, period: DateRange) -> OrdersSummary:
-    counts = order_repository.get_status_counts(db, period.start, period.end)
-    return OrdersSummary(
-        total=sum(counts.values()),
-        by_status=[StatusCount(status=status, count=counts.get(status, 0)) for status in ORDER_STATUSES],
+        revenue=KpiData(value=current.revenue, change=change_or_zero(current.revenue, previous.revenue)),
+        orders=KpiData(value=current.orders, change=change_or_zero(current.orders, previous.orders)),
+        customers=KpiData(value=current.customers, change=change_or_zero(current.customers, previous.customers)),
+        profit=KpiData(value=profit, change=change_or_zero(profit, previous_profit)),
     )
 
 
 def get_top_category(db: Session, period: DateRange) -> TopCategory | None:
-    current = order_repository.get_revenue_by_category(db, period.start, period.end)
+    current = order_repository.get_category_sales(db, period.start, period.end)
     if not current:
         return None
 
     previous_period = period.previous()
-    previous = dict(order_repository.get_revenue_by_category(db, previous_period.start, previous_period.end))
+    previous_sales = order_repository.get_category_sales(db, previous_period.start, previous_period.end)
+    previous = {c.name: c.revenue for c in previous_sales}
 
-    name, revenue = current[0]
-    total_revenue = sum(value for _, value in current)
+    top = current[0]
+    total_revenue = sum(c.revenue for c in current)
     return TopCategory(
-        name=name,
-        revenue=revenue,
-        share=share_percent(revenue, total_revenue),
-        change=percent_change(revenue, previous.get(name, 0)),
+        name=top.name,
+        revenue=top.revenue,
+        share=share_percent(top.revenue, total_revenue),
+        change=change_or_zero(top.revenue, previous.get(top.name, 0)),
     )
 
 
@@ -73,11 +65,11 @@ def get_dashboard(db: Session) -> DashboardResponse:
     return DashboardResponse(
         user=UserInfo(name="Pradeep", role="Business Analyst"),
         unread_alerts=activity_repository.count_activities_since(db, "alert", week_ago),
-        period=ReportPeriod(start_date=period.start, end_date=period.end, days=period.days),
+        period=to_report_period(period),
         kpis=get_kpis(db, period),
         analytics=Analytics(
             revenue_trend=get_daily_points(db, trend_period),
-            orders_summary=get_orders_summary(db, period),
+            orders_summary=build_orders_summary(order_repository.get_status_counts(db, period.start, period.end)),
             top_category=get_top_category(db, period),
         ),
         recent_activities=[to_activity_out(a) for a in activities],
