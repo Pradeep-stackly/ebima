@@ -8,7 +8,7 @@ import ChangeBadge from './ChangeBadge';
 interface KpiCardProps {
   label: string;
   value: string;
-  changePercent: number;
+  changePercent: number | null;
   icon: IconName;
   caption?: string;
   style?: StyleProp<ViewStyle>;

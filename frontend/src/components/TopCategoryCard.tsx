@@ -1,16 +1,27 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, fontSize, radius, spacing } from '../constants/theme';
-import { TopCategory } from '../types';
-import { formatCurrencyCompact } from '../utils/format';
+import { formatCurrencyCompact, formatNumber } from '../utils/format';
 import Card from './Card';
 import ChangeBadge from './ChangeBadge';
 
 interface TopCategoryCardProps {
-  category: TopCategory;
+  category: {
+    name: string;
+    revenue: number;
+    share: number;
+    change?: number | null;
+    orders?: number;
+    itemsSold?: number;
+  };
 }
 
 export default function TopCategoryCard({ category }: TopCategoryCardProps) {
+  const details = [
+    category.orders !== undefined ? `${formatNumber(category.orders)} orders` : null,
+    category.itemsSold !== undefined ? `${formatNumber(category.itemsSold)} items sold` : null,
+  ].filter(Boolean);
+
   return (
     <Card>
       <View style={styles.row}>
@@ -25,14 +36,16 @@ export default function TopCategoryCard({ category }: TopCategoryCardProps) {
         </View>
         <View style={styles.right}>
           <Text style={styles.revenue}>{formatCurrencyCompact(category.revenue)}</Text>
-          <ChangeBadge changePercent={category.change} />
+          {category.change !== undefined ? <ChangeBadge changePercent={category.change} /> : null}
         </View>
       </View>
 
       <View style={styles.track}>
         <View style={[styles.fill, { width: `${Math.min(category.share, 100)}%` }]} />
       </View>
-      <Text style={styles.share}>{category.share}% of total revenue</Text>
+      <Text style={styles.share}>
+        {category.share}% of total sales{details.length ? ` · ${details.join(' · ')}` : ''}
+      </Text>
     </Card>
   );
 }

@@ -4,11 +4,21 @@ import { colors, fontSize, radius, spacing } from '../constants/theme';
 import { formatPercent } from '../utils/format';
 
 interface ChangeBadgeProps {
-  changePercent: number;
+  changePercent: number | null;
 }
 
 export default function ChangeBadge({ changePercent }: ChangeBadgeProps) {
-  const isUp = changePercent >= 0;
+  if (changePercent === null || changePercent === 0) {
+    return (
+      <View style={[styles.badge, { backgroundColor: colors.border }]}>
+        <Text style={[styles.text, { color: colors.textMuted }]}>
+          {changePercent === null ? 'N/A' : '0.0%'}
+        </Text>
+      </View>
+    );
+  }
+
+  const isUp = changePercent > 0;
   const color = isUp ? colors.success : colors.danger;
 
   return (

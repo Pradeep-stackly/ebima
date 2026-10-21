@@ -6,7 +6,7 @@ from app.schemas.common import OrdersSummary, ReportPeriod
 
 class KpiData(CamelModel):
     value: float
-    change: float
+    change: float | None
 
 
 class DashboardKpis(CamelModel):
@@ -20,7 +20,7 @@ class TopCategory(CamelModel):
     name: str
     revenue: float
     share: float
-    change: float
+    change: float | None
 
 
 class Analytics(CamelModel):

@@ -1,6 +1,6 @@
 export interface KpiData {
   value: number;
-  change: number;
+  change: number | null;
 }
 
 export interface DashboardKpis {
@@ -34,7 +34,7 @@ export interface TopCategory {
   name: string;
   revenue: number;
   share: number;
-  change: number;
+  change: number | null;
 }
 
 export interface Analytics {

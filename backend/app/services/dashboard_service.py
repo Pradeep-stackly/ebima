@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta, timezone
-from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
@@ -19,10 +18,6 @@ from app.utils.dates import DateRange, last_n_days
 from app.utils.metrics import percent_change, share_percent
 
 
-def change_or_zero(current: Decimal | int, previous: Decimal | int) -> float:
-    return percent_change(current, previous) or 0.0
-
-
 def get_kpis(db: Session, period: DateRange) -> DashboardKpis:
     current, previous = order_repository.get_sales_totals(db, [period, period.previous()])
 
@@ -30,10 +25,10 @@ def get_kpis(db: Session, period: DateRange) -> DashboardKpis:
     previous_profit = previous.revenue - previous.cost
 
     return DashboardKpis(
-        revenue=KpiData(value=current.revenue, change=change_or_zero(current.revenue, previous.revenue)),
-        orders=KpiData(value=current.orders, change=change_or_zero(current.orders, previous.orders)),
-        customers=KpiData(value=current.customers, change=change_or_zero(current.customers, previous.customers)),
-        profit=KpiData(value=profit, change=change_or_zero(profit, previous_profit)),
+        revenue=KpiData(value=current.revenue, change=percent_change(current.revenue, previous.revenue)),
+        orders=KpiData(value=current.orders, change=percent_change(current.orders, previous.orders)),
+        customers=KpiData(value=current.customers, change=percent_change(current.customers, previous.customers)),
+        profit=KpiData(value=profit, change=percent_change(profit, previous_profit)),
     )
 
 
@@ -52,7 +47,7 @@ def get_top_category(db: Session, period: DateRange) -> TopCategory | None:
         name=top.name,
         revenue=top.revenue,
         share=share_percent(top.revenue, total_revenue),
-        change=change_or_zero(top.revenue, previous.get(top.name, 0)),
+        change=percent_change(top.revenue, previous.get(top.name, 0)),
     )
 
 

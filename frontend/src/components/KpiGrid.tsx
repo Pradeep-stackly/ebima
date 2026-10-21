@@ -21,9 +21,10 @@ const KPI_ITEMS: KpiItem[] = [
 
 interface KpiGridProps {
   kpis: DashboardKpis;
+  caption?: string;
 }
 
-export default function KpiGrid({ kpis }: KpiGridProps) {
+export default function KpiGrid({ kpis, caption }: KpiGridProps) {
   const { width } = useWindowDimensions();
   const columns = width >= 600 ? 4 : 2;
   const cardWidth = `${100 / columns}%` as const;
@@ -37,6 +38,7 @@ export default function KpiGrid({ kpis }: KpiGridProps) {
             value={item.format(kpis[item.key].value)}
             changePercent={kpis[item.key].change}
             icon={item.icon}
+            caption={caption}
           />
         </View>
       ))}
