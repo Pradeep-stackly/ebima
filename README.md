@@ -116,7 +116,7 @@ Scan the QR code with Expo Go (phone and laptop on the same Wi-Fi), or press `w`
 
 ## KPI rules
 
-Reporting period: the last 30 days including today (`REPORT_PERIOD_DAYS`). Change % compares it with the 30 days before it. If the previous value is 0, change is 0.
+Reporting period: the last 30 days including today (`REPORT_PERIOD_DAYS`). Change % compares it with the 30 days before it. If the previous value is 0, change is `null` and the app shows N/A.
 
 Sales orders = orders with status processing, shipped or delivered. Pending and cancelled orders are not counted as sales.
 
@@ -132,6 +132,93 @@ Sales orders = orders with status processing, shipped or delivered. Pending and 
 | Recent activities | latest 5 activities ordered by `created_at` desc |
 
 All of these are SQL queries (`SUM`, `COUNT`, `GROUP BY`, `WHERE`) in `app/repositories/order_repository.py`. Nothing is calculated by loading all rows into Python.
+
+## Analytics rules (Analytics screen)
+
+These rules apply to `GET /api/analytics/overview`. Every number on the Analytics screen uses the same selected date range.
+
+**Date range**
+- Dates are calendar dates in India time (`Asia/Kolkata`, set with `TIMEZONE`). `order_date` is a `DATE` column, so there is no time-of-day boundary to handle.
+- `start_date` and `end_date` are both included. Default is the last 30 days, maximum 366 days.
+- The app builds the presets in India time too (UTC+5:30, see `frontend/src/utils/dates.ts`), so "Today" means the same day on the phone and on the server.
+
+| Filter | Start date | End date |
+|---|---|---|
+| Today | today | today |
+| Last 7 Days | today - 6 days | today |
+| Last 30 Days | today - 29 days | today |
+| This Month | 1st of this month | today |
+| Custom | chosen start date | chosen end date |
+
+**Metrics**
+
+Sales orders = processing, shipped and delivered. **Cancelled and pending orders are excluded from revenue, orders, customers, profit, items sold and top category.** They are still counted in the order status breakdown and the cancellation rate.
+
+| Metric | Rule |
+|---|---|
+| Revenue | `SUM(total_amount)` of sales orders |
+| Orders | `COUNT` of sales orders |
+| Customers | distinct customers with at least one sales order in the range |
+| Profit | revenue - `SUM(quantity * products.cost_price)` |
+| Profit margin | profit / revenue x 100 |
+| Average order value | revenue / orders (0 when there are no orders) |
+| Items sold | `SUM(quantity)` of sales orders |
+| Cancellation rate | cancelled orders / all orders in the range x 100 |
+| Revenue trend | sales revenue per day, every day in the range, days without sales are 0 |
+| Order status | count of **all** orders in the range grouped by status |
+| Top category | category with the highest sales revenue. Ties go to the category name in A-Z order. Shows revenue, number of sales orders, items sold and share of total revenue. `null` when there are no sales. |
+
+Profit uses the product's current `cost_price`. The orders table has no cost-at-time-of-sale column, so if a cost price changes later, past profit changes too. This is a known limitation. A `unit_cost` column on orders would fix it, but the task asked not to change the schema unless needed.
+
+**Previous-period comparison**
+- The comparison period has the same number of days and ends the day before `start_date`. Last 7 days is compared with the 7 days before it; Today is compared with yesterday.
+- `change = (current - previous) / |previous| x 100`, rounded to 1 decimal.
+- If the previous value is 0, `change` is `null` (the app shows N/A). It never returns infinity or a fake 0% or 100%.
+- The app only displays `change`; it never calculates comparisons itself.
+
+**Performance**
+- The overview endpoint runs 4 SQL queries: one for current and previous totals together (using `FILTER (WHERE ...)` per period), one for daily revenue, one for status counts, and one for category sales. Each metric is calculated once per request.
+- Date and status filters are in the SQL `WHERE` clause, with a composite index on `orders (order_date, status)` (Alembic migration `1d3a9ebbf0a1`).
+- No caching. Analytics should show new orders straight away, and the queries are already aggregated in PostgreSQL. Caching would add stale data to manage without a real need at this size.
+
+## Analytics screen
+
+`frontend/src/screens/AnalyticsScreen.tsx`
+
+- Filter chips: Today, Last 7 Days, Last 30 Days, This Month, Custom. Custom opens a start and end date picker. If the start is after the end, or the range is longer than 366 days, a message is shown and Apply is disabled.
+- Data flow: `AnalyticsScreen` -> `useAnalyticsOverview` -> `analyticsService.getAnalyticsOverview()` -> `apiClient` -> `GET /api/analytics/overview`.
+- **Stale responses:** each request gets an id. If you switch filters quickly, only the latest request is allowed to update the screen.
+- **Duplicate requests:** selecting the range that is already loaded does not send a new request.
+- **While a new period loads**, the previous numbers stay on screen (faded) with a small spinner, so the screen never goes blank. This is intentional. If the new period fails, a banner says which period is still shown, with Retry.
+- **States:** loading spinner on first load, error screen with Retry, "No orders in this period" when the range has no orders, pull to refresh.
+- **Chart:** daily bars for up to 31 days, weekly for up to 92 days, monthly after that, so bars and labels fit on small screens. Labels are thinned to about 7. Tap a bar to see its date and amount. Days with no sales show as 0, and a range with no sales shows "No sales in this period".
+
+## Tests
+
+Backend tests are in `backend/tests/` and use pytest.
+
+```
+cd backend
+source venv/bin/activate
+pip install -r requirements-dev.txt
+pytest
+```
+
+- Tests use a separate database, `ebima_test` (your database name + `_test`). It is created automatically if missing, and tables are created fresh for each run. Your real `ebima` data is never touched. To use another database, set `TEST_DATABASE_URL`.
+- Each test inserts its own orders and runs inside a transaction that is rolled back afterwards, so tests don't depend on each other or on seed data.
+
+Covered cases:
+- range with sales: revenue, orders, customers, profit, items sold, average order value, profit margin
+- pending and cancelled orders excluded from sales but included in the status breakdown
+- start and end dates are inclusive, and orders outside the range are ignored
+- range with no sales: zeros, `hasData: false`, no top category, a trend with 0 for every day
+- previous-period comparison, and `null` change when the previous value is 0
+- `comparison_period=none`
+- top category selection, including cancelled orders ignored and ties
+- order status breakdown
+- single-day range compared with the day before
+- invalid ranges: start after end (400), longer than 366 days (400), bad date format (422), bad comparison value (422)
+- unit tests for `percent_change`, `share_percent` and the previous-period dates
 
 ## API endpoints
 
