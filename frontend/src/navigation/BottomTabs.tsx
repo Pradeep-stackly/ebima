@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors } from '../constants/theme';
+import { useAuth } from '../context/AuthContext';
 import AlertsScreen from '../screens/AlertsScreen';
 import AnalyticsScreen from '../screens/AnalyticsScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import UsersScreen from '../screens/UsersScreen';
 import { IconName } from '../types/icons';
 import { RootTabParamList } from './types';
 
@@ -15,9 +17,12 @@ const TAB_ICONS: Record<keyof RootTabParamList, { active: IconName; inactive: Ic
   Analytics: { active: 'bar-chart', inactive: 'bar-chart-outline' },
   Alerts: { active: 'notifications', inactive: 'notifications-outline' },
   Profile: { active: 'person', inactive: 'person-outline' },
+  Users: { active: 'people', inactive: 'people-outline' },
 };
 
 export default function BottomTabs() {
+  const { hasPermission } = useAuth();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -36,6 +41,7 @@ export default function BottomTabs() {
       <Tab.Screen name="Analytics" component={AnalyticsScreen} />
       <Tab.Screen name="Alerts" component={AlertsScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
+      {hasPermission('manage_users') ? <Tab.Screen name="Users" component={UsersScreen} /> : null}
     </Tab.Navigator>
   );
 }

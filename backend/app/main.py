@@ -5,8 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 
-from app.core.exceptions import InvalidDateRangeError
-from app.routers import activities, analytics, customers, dashboard, orders
+from app.core.exceptions import AppError
+from app.routers import activities, analytics, auth, customers, dashboard, orders, users
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +19,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
+app.include_router(users.router)
 app.include_router(dashboard.router)
 app.include_router(orders.router)
 app.include_router(customers.router)
@@ -26,9 +28,9 @@ app.include_router(analytics.router)
 app.include_router(activities.router)
 
 
-@app.exception_handler(InvalidDateRangeError)
-def invalid_date_range_handler(request: Request, exc: InvalidDateRangeError):
-    return JSONResponse(status_code=400, content={"detail": str(exc)})
+@app.exception_handler(AppError)
+def app_error_handler(request: Request, exc: AppError):
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
 
 @app.exception_handler(OperationalError)

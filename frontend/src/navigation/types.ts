@@ -5,6 +5,7 @@ export type RootTabParamList = {
   Analytics: undefined;
   Alerts: undefined;
   Profile: undefined;
+  Users: undefined;
 };
 
 export type TabScreenProps<T extends keyof RootTabParamList> = BottomTabScreenProps<RootTabParamList, T>;

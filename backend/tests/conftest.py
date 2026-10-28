@@ -9,10 +9,13 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.security import create_access_token, hash_password
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
-from app.models import Category, Customer, Order, Product
+from app.models import Category, Customer, Order, Product, User
+
+TEST_PASSWORD = "Password123"
 
 
 def get_test_database_url():
@@ -57,12 +60,42 @@ def db(engine):
     connection.close()
 
 
+def make_user(db: Session, email: str, role: str = "viewer", status: str = "active") -> User:
+    user = User(
+        full_name=f"{role.title()} User",
+        email=email,
+        password_hash=hash_password(TEST_PASSWORD),
+        role=role,
+        status=status,
+    )
+    db.add(user)
+    db.flush()
+    return user
+
+
+def auth_headers(user: User) -> dict[str, str]:
+    return {"Authorization": f"Bearer {create_access_token(user.id)}"}
+
+
 @pytest.fixture
-def client(db):
+def users(db):
+    return {role: make_user(db, f"{role}@example.com", role) for role in ("admin", "analyst", "viewer")}
+
+
+# client without a token
+@pytest.fixture
+def api(db):
     app.dependency_overrides[get_db] = lambda: db
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
+
+
+# client logged in as a viewer, used by the analytics tests
+@pytest.fixture
+def client(api, users):
+    api.headers.update(auth_headers(users["viewer"]))
+    return api
 
 
 class Shop:

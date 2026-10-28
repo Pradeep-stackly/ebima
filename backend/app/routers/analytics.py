@@ -3,11 +3,17 @@ from datetime import date
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from app.core.auth import require_permission
+from app.core.permissions import Permission
 from app.db.session import get_db
 from app.schemas.analytics import AnalyticsOverviewResponse, ComparisonPeriod, RevenueTrendResponse
 from app.services.analytics_service import get_overview, get_revenue_trend
 
-router = APIRouter(prefix="/api/analytics", tags=["Analytics"])
+router = APIRouter(
+    prefix="/api/analytics",
+    tags=["Analytics"],
+    dependencies=[Depends(require_permission(Permission.VIEW_ANALYTICS))],
+)
 
 
 @router.get("/overview", response_model=AnalyticsOverviewResponse)

@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.models import User
 from app.repositories import activity_repository, order_repository
 from app.schemas.dashboard import (
     Analytics,
@@ -51,14 +52,14 @@ def get_top_category(db: Session, period: DateRange) -> TopCategory | None:
     )
 
 
-def get_dashboard(db: Session) -> DashboardResponse:
+def get_dashboard(db: Session, user: User) -> DashboardResponse:
     period = last_n_days(settings.report_period_days)
     trend_period = last_n_days(settings.trend_days)
     activities, _ = activity_repository.list_activities(db, limit=settings.recent_activity_limit, offset=0)
     week_ago = datetime.now(timezone.utc) - timedelta(days=7)
 
     return DashboardResponse(
-        user=UserInfo(name="Pradeep", role="Business Analyst"),
+        user=UserInfo(name=user.full_name, role=user.role.capitalize()),
         unread_alerts=activity_repository.count_activities_since(db, "alert", week_ago),
         period=to_report_period(period),
         kpis=get_kpis(db, period),
